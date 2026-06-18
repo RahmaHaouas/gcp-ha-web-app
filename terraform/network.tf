@@ -1,10 +1,10 @@
-# --- VPC personnalisé (pas de sous-réseaux auto) ---
+# Custom VPC (no auto-subnets)
 resource "google_compute_network" "vpc" {
   name                    = "ha-vpc"
   auto_create_subnetworks = false
 }
 
-# --- Sous-réseau privé dans la région choisie ---
+# Private subnet in the chosen region
 resource "google_compute_subnetwork" "subnet" {
   name          = "ha-subnet"
   ip_cidr_range = "10.0.0.0/24"
@@ -12,7 +12,7 @@ resource "google_compute_subnetwork" "subnet" {
   network       = google_compute_network.vpc.id
 }
 
-# --- Cloud Router + NAT : sortie internet pour des VM sans IP publique ---
+# Cloud Router + NAT: internet egress for VMs without public IPs
 resource "google_compute_router" "router" {
   name    = "ha-router"
   region  = var.region
@@ -27,8 +27,8 @@ resource "google_compute_router_nat" "nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-# --- Pare-feu : autoriser le trafic du Load Balancer et des health checks ---
-# Ces plages d'IP appartiennent à l'infrastructure Google de health check / LB.
+# Firewall: allow traffic from the Load Balancer and health checks
+# These IP ranges belong to the Google health check / LB infrastructure.
 resource "google_compute_firewall" "allow_lb_health" {
   name    = "allow-lb-and-health-checks"
   network = google_compute_network.vpc.id
@@ -42,7 +42,7 @@ resource "google_compute_firewall" "allow_lb_health" {
   target_tags   = ["web"]
 }
 
-# --- Pare-feu : SSH uniquement via IAP (pas de SSH exposé sur internet) ---
+# Firewall: SSH only via IAP (no SSH exposed to the internet)
 resource "google_compute_firewall" "allow_iap_ssh" {
   name    = "allow-iap-ssh"
   network = google_compute_network.vpc.id
@@ -52,12 +52,12 @@ resource "google_compute_firewall" "allow_iap_ssh" {
     ports    = ["22"]
   }
 
-  # Plage d'IP réservée à Identity-Aware Proxy
+  # IP range reserved for Identity-Aware Proxy
   source_ranges = ["35.235.240.0/20"]
   target_tags   = ["web"]
 }
 
-# --- Pare-feu : trafic interne entre les VM du VPC ---
+# Firewall: internal traffic between VMs within the VPC
 resource "google_compute_firewall" "allow_internal" {
   name    = "allow-internal"
   network = google_compute_network.vpc.id

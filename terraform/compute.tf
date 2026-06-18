@@ -1,4 +1,4 @@
-# --- Modèle d'instance : VM sans IP publique, tag "web", startup script ---
+# Instance Model: VM without public IP, "web" tag, startup script
 resource "google_compute_instance_template" "web" {
   name_prefix  = "web-template-"
   machine_type = "e2-small"
@@ -22,7 +22,7 @@ resource "google_compute_instance_template" "web" {
   }
 }
 
-# --- Health check réutilisé pour l'autohealing ET le backend du LB ---
+# Health check reused for both autohealing AND the LB backend
 resource "google_compute_health_check" "web" {
   name                = "web-health-check"
   check_interval_sec  = 5
@@ -36,7 +36,7 @@ resource "google_compute_health_check" "web" {
   }
 }
 
-# --- Managed Instance Group RÉGIONAL : VM réparties sur plusieurs zones ---
+# REGIONAL Managed Instance Group: VMs distributed across multiple zones
 resource "google_compute_region_instance_group_manager" "web" {
   name               = "web-mig"
   region             = var.region
@@ -51,14 +51,14 @@ resource "google_compute_region_instance_group_manager" "web" {
     port = 80
   }
 
-  # Autohealing : si une VM échoue au health check, le MIG la recrée
+  # Autohealing: if a VM fails the health check, the MIG recreates it
   auto_healing_policies {
     health_check      = google_compute_health_check.web.id
     initial_delay_sec = 90
   }
 }
 
-# --- Autoscaler : ajuste le nombre de VM selon la charge CPU ---
+# Autoscaler: adjusts the number of VMs based on CPU load
 resource "google_compute_region_autoscaler" "web" {
   name   = "web-autoscaler"
   region = var.region

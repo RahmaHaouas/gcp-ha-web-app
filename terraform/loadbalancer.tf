@@ -1,13 +1,13 @@
-# --- IP publique globale et statique pour le Load Balancer ---
+# Global and static public IP for the Load Balancer
 resource "google_compute_global_address" "lb_ip" {
   name = "ha-lb-ip"
 }
 
-# --- Cloud Armor : politique de sécurité (WAF) basique ---
+# Cloud Armor: basic security policy (WAF)
 resource "google_compute_security_policy" "armor" {
   name = "ha-armor-policy"
 
-  # Règle d'exemple : limiter le débit par IP (protection anti-abus simple)
+  # Example rule: rate limiting per IP (simple anti-abuse protection)
   rule {
     action   = "rate_based_ban"
     priority = 1000
@@ -31,7 +31,7 @@ resource "google_compute_security_policy" "armor" {
     }
   }
 
-  # Règle par défaut obligatoire
+  # Mandatory default rule
   rule {
     action   = "allow"
     priority = 2147483647
@@ -42,7 +42,7 @@ resource "google_compute_security_policy" "armor" {
   }
 }
 
-# --- Backend service : relie le LB au MIG, via le health check ---
+# Backend service: connects the LB to the MIG via the health check
 resource "google_compute_backend_service" "web" {
   name                  = "web-backend"
   protocol              = "HTTP"
@@ -59,19 +59,19 @@ resource "google_compute_backend_service" "web" {
   }
 }
 
-# --- URL map : route tout le trafic vers le backend ---
+# URL map: routes all traffic to the backend
 resource "google_compute_url_map" "web" {
   name            = "web-url-map"
   default_service = google_compute_backend_service.web.id
 }
 
-# --- Proxy HTTP ---
+# Target HTTP Proxy
 resource "google_compute_target_http_proxy" "web" {
   name    = "web-http-proxy"
   url_map = google_compute_url_map.web.id
 }
 
-# --- Forwarding rule : point d'entrée public sur le port 80 ---
+# Forwarding rule: public entry point on port 80
 resource "google_compute_global_forwarding_rule" "web" {
   name                  = "web-forwarding-rule"
   target                = google_compute_target_http_proxy.web.id
